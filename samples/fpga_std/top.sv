@@ -60,7 +60,7 @@ module top(
 	assign cpu_data[7:0]		= !bus_oe ? 8'hzz : region ? cpu_dati_tg : cpu_dati_pc;
 	assign cpu_rst				= !cpu_rst_n ? 0 : 1'bz;
 	assign cpu_cart 			= !cpu_cart_n ? 0 : 1'bz;
-	assign cpu_irq 			= !cpu_irq_n ? 0 : 1;//1'bz;
+	assign cpu_irq 			= !use_irq ? 1'bz : !cpu_irq_n ? 0 : 1;//1'bz;
 	
 	wire [7:0]cpu_dati_pc	= cpu_dati;
 	wire [7:0]cpu_dati_tg	= {cpu_dati[0],cpu_dati[1],cpu_dati[2],cpu_dati[3],cpu_dati[4],cpu_dati[5],cpu_dati[6],cpu_dati[7]};
@@ -110,6 +110,7 @@ module top(
 	assign dat_dir 			= bus_oe;//data bus direction
 	assign dat_oe 				= !cpu_rst ? 1 : 0;//bus output always enabled
 	wire bus_oe;
+	wire use_irq;
 //************************************************************************************* leds
 	assign led_n 				= led_r | led_g ? 0 : 1'bz;
 	wire led_g;
@@ -159,6 +160,7 @@ module top(
 		.dac_sdin(dac_sdin),
 		
 		.bus_oe(bus_oe),
+		.use_irq(use_irq),
 		.led_g(led_g),
 		.led_r(led_r),
 		.btn(!btn_n)

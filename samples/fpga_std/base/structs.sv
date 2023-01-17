@@ -84,6 +84,7 @@ typedef struct{
 	bit irq;
 	bit led;
 	bit mcu_master;
+	bit use_irq;
 	
 	MemCtrl ram; //wram  64K
 	MemCtrl brm; //bram  2K
@@ -156,6 +157,9 @@ typedef struct{
 	bit ct_cc_on;
 	bit ct_stereo;
 	bit ct_cart_off;
+	
+	bit [7:0]vol_l;
+	bit [7:0]vol_r;
 		
 }SysCfg;
 

@@ -9,6 +9,8 @@ module sys_cfg(
 	output SysCfg cfg
 );
 	
+	initial cfg.vol_l = 255;
+	initial cfg.vol_r = 255;
 	
 	always @(posedge clk)
 	if(rst)
@@ -38,10 +40,10 @@ module sys_cfg(
 			cfg.key_menu		<= pi.dato;
 		end
 		4:begin
-			//reserved
+			cfg.vol_l			<= pi.dato;
 		end
-		4:begin
-			//reserved
+		5:begin
+			cfg.vol_r			<= pi.dato;
 		end
 		6:begin
 			cfg.exp_type		<= pi.dato;

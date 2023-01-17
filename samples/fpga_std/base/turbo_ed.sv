@@ -46,6 +46,7 @@ module turbo_ed(
 	output dac_sdin,
 	
 	output bus_oe,
+	output use_irq,
 	output led_g,
 	output led_r,
 	input  btn
@@ -282,6 +283,8 @@ module turbo_ed(
 		.dac(dac_exp),
 		.stereo(cfg.ct_stereo),
 		.cart_off(cfg.ct_cart_off),
+		.vol_l(cfg.vol_l),
+		.vol_r(cfg.vol_r),
 		
 		.mclk(dac_mclk), 
 		.lrck(dac_lrck),
@@ -350,6 +353,7 @@ module turbo_ed(
 	assign mcu_master			= exp_o.mcu_master & !sst_act;
 	assign hub_irq				= exp_o.irq | huc_o.irq;
 	assign dac_exp				= exp_o.dac;
+	assign use_irq				= exp_o.use_irq;
 	
 	wire exp_ce					= exp_o.ce;
 	wire [7:0]exp_dato		= exp_o.dato;

@@ -7,6 +7,8 @@ module audio(
 	input  DacIn dac,
 	input  stereo,
 	input  cart_off,
+	input  [7:0]vol_l,
+	input  [7:0]vol_r,
 	
 	output mclk, 
 	output lrck,
@@ -14,6 +16,7 @@ module audio(
 	output sdin
 );	
 	
+		
 	wire signed [15:0]snd_l;
 	mute_snd mute_l(
 
@@ -40,13 +43,39 @@ module audio(
 	wire signed[15:0]dac_l 	=                 stereo ? snd_l : snd_m;
 	wire signed[15:0]dac_r 	= !cart_off ? 0 : stereo ? snd_r : snd_m;
 	
+	
+	
+	wire signed [15:0]dac_l_vc;
+	vol_ctrl vol_ctrl_l(
+
+		.clk(clk),
+		.next_sample(dsc.next_sample),
+		.vol(vol_l + 1),
+		
+		.vol_i(dac_l),
+		.vol_o(dac_l_vc)
+	);
+	
+	
+	wire signed [15:0]dac_r_vc;
+	vol_ctrl vol_ctrl_r(
+
+		.clk(clk),
+		.next_sample(dsc.next_sample),
+		.vol(vol_r + 1),
+		
+		.vol_i(dac_r),
+		.vol_o(dac_r_vc)
+	);
+	
+	
 	dac_cs4344 dac_inst(
 		
 		.clk(clk),
 		.dac_clk(dac.uclk_act ? dac.uclk : dac_clk_std),
 		.dsc(dsc),
-		.snd_l(dac_l),
-		.snd_r(dac_r),
+		.snd_l(dac_l_vc),
+		.snd_r(dac_r_vc),
 		
 		.mclk(mclk), 
 		.lrck(lrck),
@@ -177,4 +206,22 @@ module mute_snd(
 
 endmodule
 
+//******************************* vol ctrl
+module vol_ctrl(
+
+	input  clk,
+	input  next_sample,
+	input  signed[9:0]vol,
+	
+	input  signed[15:0]vol_i,
+	output signed[15:0]vol_o
+);
+		
+	always @(posedge clk)
+	if(next_sample)
+	begin
+		vol_o			<= vol_i * vol / 256;
+	end
+
+endmodule
 
