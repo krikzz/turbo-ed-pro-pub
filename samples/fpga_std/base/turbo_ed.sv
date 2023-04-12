@@ -11,6 +11,7 @@ module turbo_ed(
 	input  cpu_oe_n, 
 	input  cpu_we_n,
 	input  cpu_hsm,
+	input  cpu_ce,
 	output cpu_irq_n,
 	output cpu_rst_n,
 	output cpu_cart_n,
@@ -53,6 +54,7 @@ module turbo_ed(
 );	
 	
 	SysCfg cfg;
+	CpuBus cpu;
 //****************************************************************************** mem ctrl	
 	DmaBus  dma;
 	MemCtrl mio_mem;
@@ -75,7 +77,7 @@ module turbo_ed(
 	dma.req_ram0	? dma.mem :
 	mio_ce0			? mio_mem :
 	huc_rom_ce0		? huc_rom :
-	huc_ram.ce		? huc_ram :
+	huc_ram.ce		? huc_ram : 
 	exp_ram.ce  	? exp_ram :
 	mem_off;
 	
@@ -102,21 +104,18 @@ module turbo_ed(
 	exp_adp.ce  	? 'h400000 ://64K
 	0;	
 
-	
 	assign ram0_dati		= ram0.dati;
 	assign ram0_addr		= ram0.addr | ram0_map;
-	assign ram0_ce			= ram0.ce & (ram0.oe | ram0.we);
 	assign ram0_oe			= ram0.oe;
 	assign ram0_we			= ram0.we;
-	
+	assign ram0_ce			= ram0.ce & ram0.ce2;
 	
 	assign ram1_dati		= ram1.dati;
 	assign ram1_addr		= ram1.addr | ram1_map;
-	assign ram1_ce			= ram1.ce & (ram1.oe | ram1.we);
 	assign ram1_oe			= ram1.oe;
 	assign ram1_we			= ram1.we;
+	assign ram1_ce			= ram1.ce & ram1.ce2;
 //****************************************************************************** cpu bus
-	CpuBus cpu;
 	wire cpu_irq;
 	
 	assign cpu_irq_n 		= !hub_irq;
@@ -125,15 +124,15 @@ module turbo_ed(
 	
 	cpu_io cpu_io_inst(
 	
-		.clk(clk),
-		
+		.clk(clk),		
 		.cpu_dato(cpu_dato),
 		.cpu_addr(cpu_addr),
 		.cpu_oe_n(cpu_oe_n), 
 		.cpu_we_n(cpu_we_n),
 		.cpu_hsm(cpu_hsm),
 		.cpu_irq_n(cpu_irq_n),
-		.cpu_rst_n(cpu_rst_n),		
+		.cpu_rst_n(cpu_rst_n),
+		.cpu_ce(cpu_ce),
 		
 		.cpu(cpu)
 	);
@@ -265,7 +264,7 @@ module turbo_ed(
 	rst_ctrl rst_ctrl_inst(
 
 		.clk(clk),
-		.btn(btn),
+		.btn(btn_filt),
 		.rst_delay(cfg.ct_rst_dl),
 		.sst_on(sst_on),
 		
@@ -283,6 +282,7 @@ module turbo_ed(
 		.dac(dac_exp),
 		.stereo(cfg.ct_stereo),
 		.cart_off(cfg.ct_cart_off),
+		.mute(sst_act),
 		.vol_l(cfg.vol_l),
 		.vol_r(cfg.vol_r),
 		
@@ -304,6 +304,7 @@ module turbo_ed(
 	assign huc_i.ram_dato 	= ram0_dato;
 	assign huc_i.brm_dato 	= brm_dato;
 	assign huc_i.cpu 			= cpu;
+	assign huc_i.region		= cfg.huc_region;
 	
 	assign huc_rom				= huc_o.rom;
 	assign huc_ram				= huc_o.ram;
@@ -417,7 +418,7 @@ module turbo_ed(
 		.clk(clk),
 		.cpu(cpu),
 		.sst_on(sst_on),
-		.sst_req_bnt(btn & cfg.ct_rst_dl),
+		.sst_req_bnt(btn_filt & cfg.ct_rst_dl),
 		.sst_ce_addr(reg_ce_ssta),
 		.sst_ce_data(reg_ce_sstd),
 		.key_save(cfg.key_save),
@@ -443,9 +444,7 @@ module turbo_ed(
 		.cc_dato(cc_dato),
 		.cc_ce(cc_ce)
 	);*/
-//****************************************************************************** leds
-	//assign led_g	= exp_o.led | huc_o.led | sst_act | rst_cfg;
-	//assign led_r	= bc_req;
+//****************************************************************************** var
 	
 	led_ctrl led_inst_g(
 		.clk(clk),
@@ -457,6 +456,16 @@ module turbo_ed(
 		.clk(clk),
 		.led_i(bc_req),
 		.led_o(led_r),
+	);
+	
+	
+	wire btn_filt;
+	
+	btn_filter btn_filter_inst(
+
+		.clk(clk),
+		.btn_i(btn),
+		.btn_o(btn_filt)
 	);
 	
 endmodule

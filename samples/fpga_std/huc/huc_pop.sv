@@ -21,12 +21,14 @@ module huc_pop(//populous mapper
 	
 	assign rom.dati	= cpu.data;
 	assign rom.addr	= cpu.addr[19:0];
+	assign rom.ce2		= cpu.ce;
 	assign rom.ce		= cpu.addr[20:19] == 0;
 	assign rom.oe		= cpu.oe;
 	assign rom.we		= 0;
 	
 	assign ram.dati	= cpu.data;
 	assign ram.addr	= cpu.addr[14:0];
+	assign ram.ce2		= cpu.ce;
 	assign ram.ce		= cpu.addr[20:19] == 1;
 	assign ram.oe		= cpu.oe;
 	assign ram.we		= cpu.we;

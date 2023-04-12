@@ -23,17 +23,21 @@
 
 # Clock constraints
 
+#create_clock -name "clk" -period 10.000ns [get_ports {clk}] -waveform {0.000 5.000}
 create_clock -name "clk" -period 20.000ns [get_ports {clk}] -waveform {0.000 10.000}
 create_clock -name "spi_sck" -period 20.000ns [get_ports {spi_sck}] -waveform {0.000 10.000}
-
-#set_false_path –from [get_clocks {clk50}] –to [get_clocks {spi_sck}]
 
 set_false_path -from [get_clocks clk] -to [get_clocks spi_sck]
 set_false_path -from [get_clocks spi_sck] -to [get_clocks clk]
 
 
+
+
+
 # Automatically constrain PLL and other generated clocks
 derive_pll_clocks -create_base_clocks
+
+#set clk_pll pll_1_inst|altpll_component|auto_generated|pll1|clk[0]
 
 # Automatically calculate clock uncertainty to jitter and other effects.
 derive_clock_uncertainty

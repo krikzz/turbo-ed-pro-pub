@@ -2,64 +2,52 @@
 //****************************************************************************** cpu io
 module cpu_io(
 	
-	input  clk,
-	
+	input  clk,	
 	input  [7:0]cpu_dato,
 	input  [20:0]cpu_addr,
 	input  cpu_oe_n, 
 	input  cpu_we_n,
 	input  cpu_hsm,
-	input cpu_irq_n,
-	input cpu_rst_n,
+	input  cpu_irq_n,
+	input  cpu_rst_n,
+	input  cpu_ce,
 	
 	output CpuBus cpu
 );
 
-	
-	
-	assign cpu.data[7:0]		= cpu.we_sync ? data_sync : cpu_dato[7:0];
-	assign cpu.addr[20:0]	= cpu.we_sync ? addr_sync : cpu_addr[20:0];
+	assign cpu.data[7:0]		= cpu_dato[7:0];
+	assign cpu.addr[20:0]	= cpu_addr[20:0];
 	assign cpu.oe				= !cpu_oe_n;
 	assign cpu.we				= !cpu_we_n & we_stb;
-	assign cpu.we_sync		= cpu_we_st[2:0] == 'b110;//potential bus problem
-	assign cpu.oe_sync		= cpu_oe_st[2:0] == 'b011;//potential bus problem
 	assign cpu.hsm				= cpu_hsm;
 	assign cpu.irq				= !cpu_irq_n;
 	assign cpu.rst				= !cpu_rst_n;
+	assign cpu.we_sync		= cpu_hsm ? cpu_we_st[3:1] == 'b001 : cpu_we_st[12:10] == 'b001;
+	assign cpu.ce				= cpu_ce;
+	
+	
+	edge_dtk edge_oe_sync(
 
+		.clk(clk),
+		.sig_i(cpu.oe),
+		.sig_pe(cpu.oe_sync)
+	);
 	
 	
-	reg [7:0]cpu_we_st;
-	reg [7:0]cpu_oe_st;
-	
-	always @(posedge clk)
-	begin
-		cpu_oe_st[7:0]	<= {cpu_oe_st[6:0], cpu.oe};
-		cpu_we_st[7:0]	<= {cpu_we_st[6:0], cpu.we};
-	end
-	
-	reg [7:0]data_sync;
-	reg [20:0]addr_sync;
-	
-	always @(negedge cpu.we)
-	begin
-		data_sync		<= cpu_dato[7:0];
-		addr_sync		<= cpu_addr[20:0];
-	end
+	wire we_stb				= cpu.hsm ? we_stb_hs : we_stb_ls;
+	wire we_stb_hs			= 1;
+	wire we_stb_ls			= cpu_we_st[8:7] != 0;
 	
 	
-	
-	wire we_stb					= cpu.hsm ? 1 : we_stb_st[5];
-	
-	reg [7:0]we_stb_st;
+	reg [12:0]cpu_we_st;
 	
 	always @(posedge clk)
 	begin
-		we_stb_st	<= {we_stb_st[6:0], !cpu_we_n};
+		cpu_we_st			<= {cpu_we_st[11:0], !cpu_we_n};
 	end
 	
+		
 endmodule
-
 //****************************************************************************** timer
 module timer(
 
@@ -98,7 +86,6 @@ module timer(
 	end
 
 endmodule
-
 //****************************************************************************** sys_status
 module sys_status(
 
@@ -141,7 +128,6 @@ module sys_status(
 	
 endmodule
 //****************************************************************************** clk div
-
 module clk_dvp(
 
 	input clk,
@@ -159,7 +145,7 @@ module clk_dvp(
 	
 	reg [31:0]clk_ctr;
 		
-	always @(negedge clk)
+	always @(posedge clk)
 	if(rst)
 	begin
 		clk_ctr	<= 0;
@@ -205,6 +191,7 @@ module dma_io(
 	
 	assign dma.mem.dati	= pi.dato;
 	assign dma.mem.addr	= pi.addr;
+	assign dma.mem.ce2	= 1;
 	assign dma.mem.ce		= pi.act & (pi.oe | pi.we);
 	assign dma.mem.oe		= pi.act & pi.oe;
 	assign dma.mem.we		= pi.act & pi.we;
@@ -229,6 +216,7 @@ module mem_io(
 	
 	assign mem.dati	= cpu.data;
 	assign mem.addr	= addr;
+	assign mem.ce2		= cpu.ce;
 	assign mem.ce		= ce_data & (mem_ce0 | mem_ce1);
 	assign mem.oe		= cpu.oe;
 	assign mem.we		= cpu.we & addr[31];
@@ -256,18 +244,18 @@ module mem_io(
 	
 	
 	wire mem_rw			= ce_data & (cpu.oe | cpu.we);
-	wire mem_rw_end	= rw_st[2:0] == 'b110;
+	wire mem_rw_end;
 	
-	reg [2:0]rw_st;
-	
-	always @(posedge clk)
-	begin
-		rw_st[2:0]	<= {rw_st[1:0], mem_rw};
-	end
+	edge_dtk edge_mem_rw(
+
+		.clk(clk),
+		.sync_mode(1),
+		.sig_i(mem_rw),
+		.sig_ne(mem_rw_end)
+	);
 	
 endmodule
 //****************************************************************************** led ctrl
-
 module led_ctrl(
 	
 	input  clk,
@@ -338,4 +326,66 @@ module rst_ctrl(
 		
 	end
 
+endmodule
+//****************************************************************************** button filter
+module btn_filter(
+
+	input  clk,
+	input  btn_i,
+	output btn_o
+);
+	
+	reg [1:0]btn_i_st;
+	reg [20:0]ctr;
+	
+	always @(posedge clk)
+	begin
+		
+		btn_i_st		<= {btn_i_st[0], btn_i}; 
+		
+		if(btn_i_st[0] != btn_i_st[1])
+		begin
+			ctr	<= 2;
+		end
+			else
+		begin
+			ctr	<= ctr == 1 ? 1 : ctr + 1;
+			btn_o	<= ctr == 0 ? btn_i_st[0] : btn_o;
+		end
+		
+		
+	end
+
+endmodule
+//****************************************************************************** edge detector
+module edge_dtk(
+
+	input  clk,
+	input  sync_mode,
+	input  delay,
+	input  sig_i,
+	output sig_pe,
+	output sig_ne
+);
+	
+	assign sig_pe		= sync_mode ? sig_pe_m1 : sig_pe_m0;
+	assign sig_ne		= sync_mode ? sig_ne_m1 : sig_ne_m0;
+	
+	wire sig_pe_m0		= sig_st[2:0] == 'b001;
+	wire sig_ne_m0		= sig_st[2:0] == 'b110;
+	
+	wire sig_pe_m1		= sig_st[2:0] == 'b011;
+	wire sig_ne_m1		= sig_st[2:0] == 'b100;
+	
+	wire sig_input		= delay ? sig_i_st : sig_i;
+	
+	reg sig_i_st;
+	reg [3:0]sig_st;
+	
+	always @(posedge clk)
+	begin
+		sig_i_st			<= sig_i;
+		sig_st[3:0]		<= {sig_st[2:0], sig_input};
+	end
+	
 endmodule

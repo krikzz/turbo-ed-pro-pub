@@ -21,12 +21,14 @@ module huc_ssc(//super system card
 	
 	assign rom.dati	= cpu.data;
 	assign rom.addr	= cpu.addr[19:0];
+	assign rom.ce2		= cpu.ce;
 	assign rom.ce		= cpu.addr[20:19] == 0;
 	assign rom.oe		= cpu.oe;
 	assign rom.we		= 0;
 	
 	assign ram.dati	= cpu.data;
 	assign ram.addr	= cpu.addr[17:0];
+	assign ram.ce2		= cpu.ce;
 	assign ram.ce		= {cpu.addr[20:18], 18'd0} == 'h0C0000 & cpu.addr[17:16] != 0;//192K
 	assign ram.oe		= cpu.oe;
 	assign ram.we		= cpu.we;
@@ -40,10 +42,9 @@ module huc_ssc(//super system card
 	cpu.addr[2:0] == 1 ? 8'haa : 
 	cpu.addr[2:0] == 2 ? 8'h55 : 
 	cpu.addr[2:0] == 3 ? 8'h00 : 
-	cpu.addr[2:0] == 5 ? 8'haa : 
-	cpu.addr[2:0] == 6 ? 8'h55 : 
-	cpu.addr[2:0] == 7 ? 8'h03 : 
+	cpu.addr[2:0] == 5 ? (huc_i.region ? 8'h55 :8'haa) :
+	cpu.addr[2:0] == 6 ? (huc_i.region ? 8'haa :8'h55) :
+	cpu.addr[2:0] == 7 ? (huc_i.region ? 8'hc0 :8'h03) :
 	8'hff;
-	
 	
 endmodule

@@ -21,6 +21,7 @@ module huc_sf2(//street fighter mapper
 	
 	assign rom.dati	= cpu.data;
 	assign rom.addr	= rom_x;
+	assign rom.ce2		= cpu.ce;
 	assign rom.ce		= cpu.addr[20] == 0;
 	assign rom.oe		= cpu.oe;
 	assign rom.we		= 0;

@@ -7,6 +7,7 @@ module audio(
 	input  DacIn dac,
 	input  stereo,
 	input  cart_off,
+	input  mute,
 	input  [7:0]vol_l,
 	input  [7:0]vol_r,
 	
@@ -16,57 +17,56 @@ module audio(
 	output sdin
 );	
 	
-		
-	wire signed [15:0]snd_l;
-	mute_snd mute_l(
-
-		.clk(clk),
-		.mute(!dac.snd_on),
-		.next_sample(dsc.next_sample),
-		.snd_i(dac.snd_l),
-		.snd_o(snd_l)
-	);
-	
-	wire signed [15:0]snd_r;
-	mute_snd mute_r(
-
-		.clk(clk),
-		.mute(!dac.snd_on),
-		.next_sample(dsc.next_sample),
-		.snd_i(dac.snd_r),
-		.snd_o(snd_r)
-	);
-	
-	
-	wire signed[15:0]snd_m	= (snd_l + snd_r) / 2;
-	
-	wire signed[15:0]dac_l 	=                 stereo ? snd_l : snd_m;
-	wire signed[15:0]dac_r 	= !cart_off ? 0 : stereo ? snd_r : snd_m;
-	
-	
-	
-	wire signed [15:0]dac_l_vc;
+	wire signed [15:0]snd_l_vc;// = dac.snd_on ? 32000 : 0;
 	vol_ctrl vol_ctrl_l(
 
 		.clk(clk),
 		.next_sample(dsc.next_sample),
 		.vol(vol_l + 1),
 		
-		.vol_i(dac_l),
-		.vol_o(dac_l_vc)
+		.vol_i(dac.snd_l),
+		.vol_o(snd_l_vc)
 	);
 	
 	
-	wire signed [15:0]dac_r_vc;
+	wire signed [15:0]snd_r_vc;// = dac.snd_on ? -32000 : 0;
 	vol_ctrl vol_ctrl_r(
 
 		.clk(clk),
 		.next_sample(dsc.next_sample),
 		.vol(vol_r + 1),
 		
-		.vol_i(dac_r),
-		.vol_o(dac_r_vc)
+		.vol_i(dac.snd_r),
+		.vol_o(snd_r_vc)
 	);
+	
+		
+	wire signed [15:0]snd_l_mc;
+	mute_snd mute_l(
+
+		.clk(clk),
+		.mute(!dac.snd_on | mute),
+		.next_sample(dsc.next_sample),
+		.snd_i(snd_l_vc),
+		.snd_o(snd_l_mc)
+	);
+	
+	wire signed [15:0]snd_r_mc;
+	mute_snd mute_r(
+
+		.clk(clk),
+		.mute(!dac.snd_on | mute | !cart_off),
+		.next_sample(dsc.next_sample),
+		.snd_i(snd_r_vc),
+		.snd_o(snd_r_mc)
+	);
+	
+
+	
+	wire signed[15:0]snd_m		= (snd_l_mc + snd_r_mc) / 2;
+	
+	wire signed[15:0]dac_l 		= stereo ? snd_l_mc : snd_m;
+	wire signed[15:0]dac_r 		= stereo ? snd_r_mc : snd_m;
 	
 	
 	dac_cs4344 dac_inst(
@@ -74,8 +74,8 @@ module audio(
 		.clk(clk),
 		.dac_clk(dac.uclk_act ? dac.uclk : dac_clk_std),
 		.dsc(dsc),
-		.snd_l(dac_l_vc),
-		.snd_r(dac_r_vc),
+		.snd_l(dac_l),
+		.snd_r(dac_r),
 		
 		.mclk(mclk), 
 		.lrck(lrck),
@@ -179,11 +179,12 @@ module mute_snd(
 	begin
 	
 		snd_o	<= snd_cur * vol / 256;
-	
+		
 		if(!mute)
 		begin
 			snd_cur	<= snd_i;
 		end
+		
 		
 		if(delay != 0)
 		begin
@@ -192,13 +193,13 @@ module mute_snd(
 			else
 		if(mute & vol != 0)
 		begin
-			delay	<= 16;
+			delay	<= 4;
 			vol	<= vol - 1;
 		end
 			else
 		if(!mute & vol != 256)
 		begin
-			delay	<= 16;
+			delay	<= 4;
 			vol	<= vol + 1;
 		end
 		

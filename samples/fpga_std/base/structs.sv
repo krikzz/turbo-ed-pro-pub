@@ -2,11 +2,12 @@
 //********
 
 typedef struct{
-
+		
 	bit [7:0]data;
 	bit [20:0]addr;
 	bit oe;
 	bit we;
+	bit ce;
 	bit rst;
 	bit hsm;
 	bit irq;
@@ -23,6 +24,7 @@ typedef struct{
 	bit [7:0]dati;
 	bit [23:0]addr;
 	bit ce, oe, we;
+	bit ce2;//cpu cycles separator required for psram
 	
 }MemCtrl;
 
@@ -32,6 +34,7 @@ typedef struct{
 
 	bit clk;
 	bit map_rst;
+	bit region;//system card region
 	bit [7:0]rom_dato;
 	bit [7:0]ram_dato;
 	bit [7:0]brm_dato;
@@ -144,6 +147,7 @@ typedef struct{
 
 typedef struct{
 	
+	bit huc_region;
 	bit [3:0]huc_type;
 	bit [3:0]exp_type;
 	

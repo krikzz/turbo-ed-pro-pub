@@ -49,6 +49,7 @@ module sys_cfg(
 			cfg.exp_type		<= pi.dato;
 		end
 		7:begin
+			cfg.huc_region		<= pi.dato[7];
 			cfg.huc_type		<= pi.dato;
 		end
 		

@@ -228,6 +228,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE huc/huc_ssc.sv
 set_global_assignment -name SYSTEMVERILOG_FILE huc/huc_sf2.sv
 set_global_assignment -name SYSTEMVERILOG_FILE huc/huc_pop.sv
 set_global_assignment -name SYSTEMVERILOG_FILE huc/huc_nom.sv
+set_global_assignment -name SYSTEMVERILOG_FILE huc/huc_arc.sv
 set_global_assignment -name SYSTEMVERILOG_FILE huc/huc_384.sv
 set_global_assignment -name SYSTEMVERILOG_FILE exp/exp_hub.sv
 set_global_assignment -name SYSTEMVERILOG_FILE exp/exp_tnb.sv
@@ -241,4 +242,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE base/fifo.sv
 set_global_assignment -name SYSTEMVERILOG_FILE base/bram.sv
 set_global_assignment -name SYSTEMVERILOG_FILE base/audio.sv
 set_global_assignment -name SDC_FILE clocks.sdc
+set_global_assignment -name SIGNALTAP_FILE stp1.stp
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to cpu_hsm
+set_global_assignment -name QIP_FILE pll_1.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

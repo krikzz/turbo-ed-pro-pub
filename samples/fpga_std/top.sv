@@ -45,18 +45,18 @@ module top(
 	
 	//var
 	output led_n,
-	input  btn_n
+	input  btn_n,
+	output tst_clk
 );
-
-
+	
+	
 //************************************************************************************* mcu
-	assign mcu_mode 			= !mcu_master;//mcu master mode (unused, should be 1)
+	assign mcu_mode 			= !mcu_master;
 	assign mcu_rst 			= 1;
 	assign mcu_brm_n			= !mcu_brm_bc;
 	wire mcu_master;
 	wire mcu_brm_bc;
 //************************************************************************************* cpu
-	//assign data[15:8]			= !bus_oe ? 8'hzz : 8'hff;
 	assign cpu_data[7:0]		= !bus_oe ? 8'hzz : region ? cpu_dati_tg : cpu_dati_pc;
 	assign cpu_rst				= !cpu_rst_n ? 0 : 1'bz;
 	assign cpu_cart 			= !cpu_cart_n ? 0 : 1'bz;
@@ -74,14 +74,15 @@ module top(
 	wire cpu_we_n				= cpu_we;
 	wire cpu_rst_n;
 	wire cpu_cart_n;
+	wire use_irq;
 //************************************************************************************* memory	
 	assign ram0_addr[21:0] 	= mem0_addr[22:1];
 	assign ram0_data[15:0] 	= mem0_oe ? 16'hzzzz : {mem0_dati[7:0], mem0_dati[7:0]};
 	assign ram0_ce 			= !mem0_ce;
 	assign ram0_oe 			= !mem0_oe;
 	assign ram0_we 			= !mem0_we;
-	assign ram0_ub 			= !mem0_ce ? 1 : mem0_addr[0] == 0 ? 0 : 1;
-	assign ram0_lb 			= !mem0_ce ? 1 : mem0_addr[0] == 1 ? 0 : 1;
+	assign ram0_ub 			= mem0_addr[0];
+	assign ram0_lb 			= !ram0_ub;
 	
 	
 	assign ram1_addr[21:0] 	= mem1_addr[22:1];
@@ -89,8 +90,8 @@ module top(
 	assign ram1_ce 			= !mem1_ce;
 	assign ram1_oe 			= !mem1_oe;
 	assign ram1_we 			= !mem1_we;
-	assign ram1_ub 			= !mem1_ce ? 1 : mem1_addr[0] == 0 ? 0 : 1;
-	assign ram1_lb 			= !mem1_ce ? 1 : mem1_addr[0] == 1 ? 0 : 1;
+	assign ram1_ub 			= mem1_addr[0];
+	assign ram1_lb 			= !ram1_ub;
 	
 	
 	wire [7:0]mem0_dati;
@@ -100,6 +101,7 @@ module top(
 	wire mem0_oe;
 	wire mem0_we;
 	
+	
 	wire [7:0]mem1_dati;
 	wire [7:0]mem1_dato		= mem1_addr[0] == 0 ? ram1_data[15:8] : ram1_data[7:0];
 	wire [23:0]mem1_addr;
@@ -108,9 +110,8 @@ module top(
 	wire mem1_we;
 //************************************************************************************* bus drivers	
 	assign dat_dir 			= bus_oe;//data bus direction
-	assign dat_oe 				= !cpu_rst ? 1 : 0;//bus output always enabled
+	assign dat_oe 				= 0;
 	wire bus_oe;
-	wire use_irq;
 //************************************************************************************* leds
 	assign led_n 				= led_r | led_g ? 0 : 1'bz;
 	wire led_g;
@@ -126,6 +127,7 @@ module top(
 		.cpu_oe_n(cpu_oe_n), 
 		.cpu_we_n(cpu_we_n),
 		.cpu_hsm(cpu_hsm),
+		.cpu_ce(cpu_ce),
 		.cpu_irq_n(cpu_irq_n),
 		.cpu_rst_n(cpu_rst_n),
 		.cpu_cart_n(cpu_cart_n),
@@ -165,27 +167,37 @@ module top(
 		.led_r(led_r),
 		.btn(!btn_n)
 	);
-//*************************************************************************************
-	assign dbg_oe 		= !cpu_oe_n;
-	assign dbg_we 		= !cpu_we_n;
-	assign dbg_data	= cpu_data[7:0];
-	assign dbg_addr 	= cpu_addr;
+//************************************************************************************* pll
+	wire mclk8x;
 	
-	assign dbg_ck	= (oe_sync | we_sync);// & dbg_cd;
+	pll_1 pll_1_inst(
+		.inclk0(clk),
+		.c0(mclk8x)
+	);
+//************************************************************************************* cpu_ce (required for psram)
+	wire cpu_ce 		= cpu_pstart | !cpu_oe | !cpu_we;
 	
-	assign dbg_cd	= {cpu_addr[20:4], 4'd0} == 'h1FF800;
+	reg [4:0]phase;
+	reg [3:0]cpu_oe_st;
+	reg cpu_pstart;
 	
-	wire oe_sync 	= oe_st[4:2] == 'b011;
-	wire we_sync 	= we_st[2:0] == 'b011;
-	
-	reg [7:0]oe_st;
-	reg [7:0]we_st;
-	
-	always @(posedge clk)
+	always @(posedge mclk8x)
 	begin
+	
+		cpu_oe_st[3:0]	<= {cpu_oe_st[2:0], !cpu_oe};
 		
-		oe_st[7:0] <= {oe_st[6:0], dbg_oe};
-		we_st[7:0] <= {we_st[6:0], dbg_we};
+		if(cpu_oe_st[2:0] == 'b001)
+		begin
+			phase			<= 0;
+		end
+			else
+		begin
+			phase			<= phase >= 23 ? 0 : phase + 1;
+		end
+		
+		cpu_pstart		<= phase >= 16 | phase <= 2;
 		
 	end
+	
 endmodule
+

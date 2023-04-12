@@ -21,6 +21,7 @@ module huc_384(//hucard with dual rom 256+128K
 	
 	assign rom.dati	= cpu.data;
 	assign rom.addr	= cpu.addr[19] == 0 ? rom_a : rom_b;
+	assign rom.ce2		= cpu.ce;
 	assign rom.ce		= cpu.addr[20] == 0;
 	assign rom.oe		= cpu.oe;
 	assign rom.we		= 0;
