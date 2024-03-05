@@ -40,7 +40,7 @@ namespace turbolink
                     continue;
                 }
 
-                if (cmd.Equals("-rtype"))//force reset type. mostly for using with mega-sg (-rtype hard)
+                if (cmd.Equals("-rtype"))
                 {
                     cmd_forceRstType(args[i + 1]);
                     i += 1;
@@ -387,7 +387,10 @@ namespace turbolink
 
             string usb_home = "sd:usb-games";
 
-            usb.reset();
+            if (!arst_off)
+            {
+                usb.reset();
+            }
 
             usb.makeDir(usb_home);
 
